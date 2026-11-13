@@ -8,7 +8,7 @@ bevor du etwas änderst.
 Ein Physik-Spiel fürs Handy im Stil der viralen „Which color ball will win?“-Videos: farbige Bälle
 kämpfen in einer Kreis-Arena. Man **tippt auf den Sieger** (Modus Tippen) oder **steuert selbst einen
 Ball** (Modus Duell). Läuft als Web-App im Handy-Browser, veröffentlicht über GitHub Pages unter
-`https://almaz6380.github.io/color-clash/`.
+`https://almaz6380.github.io/Color-Clash/` (Groß-/Kleinschreibung beachten – genau wie der Repo-Name).
 
 **Stand:** Ein fertiger, getesteter Prototyp liegt als `index.html` im Repo. Er stammt aus dem Repo
 `almaz6380/brainstorm` (Branch `claude/admiring-faraday-vea7ur`). Baue darauf auf – nicht neu schreiben.
