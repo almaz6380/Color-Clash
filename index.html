@@ -1,0 +1,1165 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#05060a">
+<title>Ball Battle</title>
+<style>
+  :root {
+    --bg: #05060a;
+    --panel: rgba(16, 18, 28, 0.92);
+    --line: rgba(255, 255, 255, 0.12);
+    --text: #f4f5fa;
+    --muted: #9aa0b4;
+    --accent: #ffd34d;
+    --good: #3ddc5a;
+    --bad: #ff5a5a;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    overflow: hidden; touch-action: manipulation; user-select: none; -webkit-user-select: none;
+  }
+  #stage {
+    position: relative; margin: 0 auto; height: 100dvh; height: 100vh;
+    aspect-ratio: 9 / 16; max-width: 100vw; background: var(--bg);
+  }
+  @supports (height: 100dvh) { #stage { height: 100dvh; } }
+  @media (max-aspect-ratio: 9/16) { #stage { width: 100vw; height: auto; } }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+  .topbar {
+    position: absolute; top: 0; left: 0; right: 0; display: flex; justify-content: space-between;
+    align-items: center; padding: max(10px, env(safe-area-inset-top)) 14px 0; pointer-events: none;
+    font-weight: 700; font-size: 15px;
+  }
+  .pill {
+    background: rgba(255,255,255,0.08); border: 1px solid var(--line); border-radius: 999px;
+    padding: 5px 11px; display: inline-flex; gap: 6px; align-items: center;
+  }
+  .pill.streak { color: var(--accent); }
+
+  .panel {
+    position: absolute; left: 10px; right: 10px; bottom: max(10px, env(safe-area-inset-bottom));
+    background: var(--panel); border: 1px solid var(--line); border-radius: 18px;
+    padding: 12px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  }
+  .hidden { display: none !important; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin: 2px 2px 6px; }
+
+  .tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+  .tab {
+    flex: 1; padding: 7px 4px; white-space: nowrap; border-radius: 10px; border: 1px solid var(--line);
+    background: transparent; color: var(--muted); font: inherit; font-size: 13px; font-weight: 600;
+  }
+  .tab.active { background: rgba(255,255,255,0.12); color: var(--text); }
+  .tab:disabled { opacity: .45; }
+
+  .balls { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 10px; }
+  .balls.six { grid-template-columns: repeat(3, 1fr); }
+  .ballbtn {
+    border: 2px solid transparent; background: rgba(255,255,255,0.06); color: var(--text);
+    border-radius: 12px; padding: 7px 8px; font: inherit; text-align: left; display: flex;
+    gap: 8px; align-items: center; min-height: 48px;
+  }
+  .ballbtn.sel { border-color: var(--c); background: color-mix(in srgb, var(--c) 22%, transparent); }
+  .dot { width: 18px; height: 18px; border-radius: 50%; background: var(--c); flex: none; box-shadow: 0 0 10px var(--c); }
+  .bname { font-size: 13px; font-weight: 700; line-height: 1.1; }
+  .bodds { font-size: 12px; color: var(--muted); }
+  .bodds b { color: var(--accent); font-size: 14px; }
+
+  .chips { display: flex; gap: 6px; margin-bottom: 10px; }
+  .chip {
+    flex: 1; padding: 9px 0; border-radius: 10px; border: 1px solid var(--line);
+    background: transparent; color: var(--text); font: inherit; font-weight: 700; font-size: 14px;
+  }
+  .chip.sel { background: var(--accent); color: #1a1400; border-color: var(--accent); }
+  .chip:disabled { opacity: .35; }
+
+  .go {
+    width: 100%; padding: 14px; border-radius: 14px; border: 0; font: inherit; font-size: 17px;
+    font-weight: 800; background: var(--accent); color: #1a1400; letter-spacing: .02em;
+  }
+  .go:disabled { background: #3a3d4a; color: #8b8fa0; }
+  .sub { width: 100%; padding: 11px; border-radius: 12px; border: 1px solid var(--line); background: transparent;
+    color: var(--text); font: inherit; font-weight: 600; font-size: 14px; margin-top: 8px; }
+  .opts { display: flex; justify-content: space-between; align-items: center; margin-top: 9px; font-size: 13px; color: var(--muted); gap: 8px; }
+  .opts label { display: inline-flex; gap: 6px; align-items: center; }
+  .linkbtn { background: none; border: 0; color: var(--muted); font: inherit; font-size: 13px; text-decoration: underline; padding: 4px; }
+
+  .progress { height: 6px; border-radius: 99px; background: rgba(255,255,255,0.1); overflow: hidden; margin: 6px 0 10px; }
+  .progress > div { height: 100%; width: 0; background: var(--accent); transition: width .1s; }
+
+  .boost {
+    position: absolute; left: 50%; transform: translateX(-50%); bottom: max(18px, env(safe-area-inset-bottom));
+    padding: 13px 26px; border-radius: 999px; border: 2px solid var(--c, var(--accent));
+    background: rgba(10,12,20,0.85); color: var(--text); font: inherit; font-weight: 800; font-size: 16px;
+    box-shadow: 0 0 20px color-mix(in srgb, var(--c, var(--accent)) 50%, transparent);
+  }
+  .boost:disabled { opacity: .4; box-shadow: none; }
+
+  .kind { display: flex; gap: 4px; margin-bottom: 8px; padding: 3px; border-radius: 12px; background: rgba(255,255,255,0.06); }
+  .kbtn { flex: 1; padding: 8px 4px; border-radius: 9px; border: 0; background: transparent; color: var(--muted);
+    font: inherit; font-size: 14px; font-weight: 800; }
+  .kbtn.active { background: var(--text); color: #0b0c12; }
+  .stat { font-size: 11.5px; color: var(--muted); letter-spacing: .02em; }
+  .stat i { font-style: normal; color: var(--text); letter-spacing: 1px; }
+  .hint { font-size: 13px; color: var(--muted); text-align: center; margin: 2px 0 10px; line-height: 1.4; }
+  .hint b { color: var(--text); }
+  .jokers {
+    position: absolute; left: 50%; transform: translateX(-50%); bottom: max(14px, env(safe-area-inset-bottom));
+    display: flex; gap: 10px;
+  }
+  .joker {
+    width: 82px; height: 64px; border-radius: 16px; border: 2px solid var(--line); background: rgba(10,12,20,0.88);
+    color: var(--text); font: inherit; font-size: 24px; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 1px; line-height: 1;
+  }
+  .joker span { font-size: 11.5px; font-weight: 700; color: var(--muted); }
+  .joker:not(:disabled) { border-color: var(--c, var(--accent)); box-shadow: 0 0 16px color-mix(in srgb, var(--c, var(--accent)) 45%, transparent); }
+  .joker:disabled { opacity: .3; }
+  canvas { touch-action: none; }
+
+  .result-title { font-size: 22px; font-weight: 800; text-align: center; margin: 2px 0 4px; }
+  .result-sub { text-align: center; color: var(--muted); font-size: 14px; margin-bottom: 10px; }
+  .result-sub b { color: var(--text); }
+  .win { color: var(--good); } .lose { color: var(--bad); }
+
+  .help { font-size: 13.5px; line-height: 1.45; color: #d6d9e4; max-height: 48vh; overflow: auto; }
+  .help h3 { margin: 4px 0 6px; font-size: 16px; color: var(--text); }
+  .help ul { margin: 0 0 8px; padding-left: 18px; }
+  .toast {
+    position: absolute; top: 17%; left: 50%; transform: translateX(-50%); background: var(--panel);
+    border: 1px solid var(--line); padding: 8px 14px; border-radius: 999px; font-size: 13px; font-weight: 600;
+    white-space: nowrap; transition: opacity .3s; pointer-events: none;
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="cv"></canvas>
+
+  <div class="topbar">
+    <span class="pill" id="coins">🪙 100</span>
+    <span class="pill streak hidden" id="streak">🔥 0</span>
+  </div>
+  <div class="toast" id="toast" style="opacity:0"></div>
+
+  <!-- Tipp-Phase -->
+  <div class="panel" id="betPanel">
+    <div class="kind">
+      <button class="kbtn active" id="kindTip">🎯 Tippen</button>
+      <button class="kbtn" id="kindDuel">🕹️ Duell</button>
+    </div>
+    <div class="tabs" id="tipTabs">
+      <button class="tab active" id="tabFree">🎲 Frei</button>
+      <button class="tab" id="tabDaily">📅 Täglich</button>
+      <button class="tab" id="tabChaos">🔒 Chaos</button>
+    </div>
+    <div id="oddsLoading">
+      <div class="label">Quoten werden berechnet …</div>
+      <div class="progress"><div id="progBar"></div></div>
+    </div>
+    <div id="betBody" class="hidden">
+      <div class="label">Wer gewinnt? Tippe eine Farbe</div>
+      <div class="balls" id="ballList"></div>
+      <div class="label">Einsatz</div>
+      <div class="chips" id="chips"></div>
+      <button class="go" id="goBtn" disabled>Farbe wählen</button>
+    </div>
+    <div id="duelBody" class="hidden">
+      <div class="label" id="duelLabel">Duell · Stufe 1</div>
+      <div class="balls" id="duelList"></div>
+      <div class="hint">👆 <b>Wischen</b> oder <b>tippen</b> = Ball lenken · <b>3 Joker</b> pro Runde<br>Überlebe alle Gegner!</div>
+      <button class="go" id="duelGo" disabled>Deinen Ball wählen</button>
+    </div>
+    <div class="opts" id="optsRow">
+      <label><input type="checkbox" id="recChk"> 🎬 Clip aufnehmen</label>
+      <span>
+        <button class="linkbtn" id="newBtn">Neue Bälle</button>
+        <button class="linkbtn" id="helpBtn">Regeln</button>
+      </span>
+    </div>
+  </div>
+
+  <!-- Kampf -->
+  <button class="boost hidden" id="boostBtn">⚡ Boost</button>
+  <div class="jokers hidden" id="jokerBar">
+    <button class="joker" id="jkTurbo" style="--c:#ffd34d">⚡<span>Turbo</span></button>
+    <button class="joker" id="jkShield" style="--c:#5ee7ff">🛡️<span>Schild</span></button>
+    <button class="joker" id="jkMagnet" style="--c:#ff6bd6">🧲<span>Magnet</span></button>
+  </div>
+
+  <!-- Ergebnis -->
+  <div class="panel hidden" id="resultPanel">
+    <div class="result-title" id="resTitle"></div>
+    <div class="result-sub" id="resSub"></div>
+    <button class="go" id="nextBtn">Nächste Runde</button>
+    <a class="sub hidden" id="clipLink" style="display:block;text-align:center;text-decoration:none" download>⬇️ Clip speichern</a>
+    <button class="sub hidden" id="shareBtn">📤 Ergebnis teilen</button>
+  </div>
+
+  <!-- Regeln -->
+  <div class="panel hidden" id="helpPanel">
+    <div class="help">
+      <h3>So funktioniert Ball Battle</h3>
+      <ul>
+        <li><b>Tippen:</b> Wähle die Farbe, die deiner Meinung nach gewinnt, und setze Münzen. Die Quote zeigt, wie viel du bekommst – berechnet aus 200 Probe-Simulationen.</li>
+        <li><b>Strahlen:</b> Jeder Abprall an der Wand erzeugt einen Strahl, der am Ball hängt.</li>
+        <li><b>Schneiden:</b> Fliegt ein gegnerischer Ball durch einen Strahl, ist der Strahl weg.</li>
+        <li><b>Zusammenstoß:</b> Der Ball mit weniger Strahlen verliert die Hälfte davon. Gleichstand: beide verlieren einen.</li>
+        <li><b>Raus:</b> Wer bei einem Zusammenstoß weniger Strahlen hat und höchstens noch einen besitzt, scheidet aus. Bei Gleichstand (0 oder 1 Strahl) fliegt der Ball mit weniger Abprallern raus.</li>
+        <li><b>Sudden Death:</b> Ab Sekunde 22 schrumpft die Arena.</li>
+        <li><b>Sieg:</b> Letzter Ball im Spiel – oder nach 40&nbsp;s der Ball mit den meisten Strahlen.</li>
+        <li><b>⚡ Boost:</b> Einmal pro Runde kannst du deinen Ball kurz beschleunigen.</li>
+        <li><b>🔥 Serie:</b> Jeder richtige Tipp in Folge gibt +10 % Bonus (max. +50 %).</li>
+        <li><b>📅 Tages-Match:</b> Für alle dasselbe Match – ein Tipp pro Tag.</li>
+      </ul>
+      <h3>🕹️ Duell</h3>
+      <ul>
+        <li>Du wählst einen Ball und steuerst ihn selbst – die anderen sind Computer-Gegner.</li>
+        <li><b>Wischen</b> (oder in die Arena tippen) schickt deinen Ball in diese Richtung. Danach kurz Abklingzeit (Ring um deinen Ball).</li>
+        <li><b>⚡ Turbo:</b> 2 Sekunden deutlich schneller.</li>
+        <li><b>🛡️ Schild:</b> 3 Sekunden unverwundbar – keine Strahlen-Verluste, und schwache Gegner, die dich rammen, fliegen raus.</li>
+        <li><b>🧲 Magnet:</b> zieht 2,5 Sekunden alle Gegner zu dir. Stark, wenn du mehr Strahlen hast!</li>
+        <li>Jeder Joker einmal pro Runde. Mit jedem Sieg steigt die Stufe: schnellere und mehr Gegner, aber mehr Münzen.</li>
+      </ul>
+      Es wird nur mit Spielmünzen gespielt, nie mit echtem Geld.
+    </div>
+    <button class="sub" id="helpClose">Verstanden</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ================================================================
+   Simulation (deterministisch, ohne Grafik)
+   ================================================================ */
+const BALL_DEFS = [
+  { name: "Rot",    c: "#ff4d5e" },
+  { name: "Blau",   c: "#4d7cff" },
+  { name: "Grün",   c: "#3ddc5a" },
+  { name: "Orange", c: "#ffae3d" },
+  { name: "Lila",   c: "#b45cff" },
+  { name: "Türkis", c: "#2ee6d6" },
+];
+const DT = 1 / 120;
+const DURATION = 40;
+const SD_START = 22;
+const R_MIN = 0.55;
+const MAX_RAYS = 60;
+const PAIR_CD = 0.35;
+const START_RAYS = 2;
+const ODDS_SIMS = 200;
+const HOUSE = 0.9;
+
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function hashStr(s) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+
+/** Startaufstellung: Werte und Positionen aller Bälle aus einem Seed. */
+function makeSetup(seed, n) {
+  const rng = mulberry32(seed);
+  const balls = [];
+  const off = rng() * Math.PI * 2;
+  for (let i = 0; i < n; i++) {
+    const a = off + (i / n) * Math.PI * 2 + (rng() - 0.5) * 0.5;
+    const d = 0.38 + rng() * 0.22;
+    const r = 0.045 + rng() * 0.03;
+    const speed = 0.55 + rng() * 0.4;
+    const dir = rng() * Math.PI * 2;
+    const rays = [];
+    for (let k = 0; k < START_RAYS; k++) rays.push(rng() * Math.PI * 2);
+    balls.push({ x: Math.cos(a) * d, y: Math.sin(a) * d, dir, r, speed, rays });
+  }
+  return { seed, n, balls };
+}
+
+class Sim {
+  constructor(setup, runSeed, record = false) {
+    this.rng = mulberry32((runSeed ^ 0x9E3779B9) >>> 0);
+    this.record = record;
+    this.events = [];
+    this.t = 0;
+    this.R = 1;
+    this.done = false;
+    this.winner = -1;
+    this.reason = "";
+    this.balls = setup.balls.map((b, i) => ({
+      i, x: b.x, y: b.y,
+      vx: Math.cos(b.dir) * b.speed, vy: Math.sin(b.dir) * b.speed,
+      r: b.r, base: b.speed, boost: 0, rays: b.rays.slice(), alive: true, bounces: 0, outT: 0,
+      shieldUntil: -1, magnetUntil: -1,
+    }));
+    this.outOrder = [];
+    const n = this.balls.length;
+    this.cd = Array.from({ length: n }, () => new Array(n).fill(-99));
+  }
+
+  ev(e) { if (this.record) this.events.push(e); }
+
+  boost(i, amount = 0.9) {
+    const b = this.balls[i];
+    if (b && b.alive) { b.boost = amount; this.ev({ type: "boost", i }); }
+  }
+
+  /** Duell: Ball in eine Richtung schicken. */
+  steer(i, dx, dy) {
+    const b = this.balls[i], l = Math.hypot(dx, dy);
+    if (!b || !b.alive || !l) return;
+    b.vx = dx / l; b.vy = dy / l;
+    b.boost = Math.max(b.boost, 0.45);
+    this.ev({ type: "steer", i });
+  }
+  shield(i, dur = 3) { const b = this.balls[i]; if (b && b.alive) { b.shieldUntil = this.t + dur; this.ev({ type: "shield", i }); } }
+  magnet(i, dur = 2.5) { const b = this.balls[i]; if (b && b.alive) { b.magnetUntil = this.t + dur; this.ev({ type: "magnet", i }); } }
+
+  step() {
+    if (this.done) return;
+    this.t += DT;
+    const t = this.t;
+    const R = t < SD_START ? 1 : 1 - (1 - R_MIN) * Math.min(1, (t - SD_START) / (DURATION - SD_START));
+    this.R = R;
+    const B = this.balls;
+    const n = B.length;
+
+    // Magnet: Gegner werden zum Magnet-Ball gezogen
+    for (const m of B) {
+      if (!m.alive || m.magnetUntil <= t) continue;
+      for (const o of B) {
+        if (o === m || !o.alive) continue;
+        const dx = m.x - o.x, dy = m.y - o.y, d = Math.hypot(dx, dy) || 1;
+        const sp = Math.hypot(o.vx, o.vy) || 1;
+        o.vx += (dx / d) * sp * 4 * DT; o.vy += (dy / d) * sp * 4 * DT;
+      }
+    }
+
+    // Bewegung + Wand
+    for (const b of B) {
+      if (!b.alive) continue;
+      const sp = b.base * (1 + b.boost);
+      b.boost = Math.max(0, b.boost - DT * 0.55);
+      const v = Math.hypot(b.vx, b.vy) || 1;
+      b.vx = (b.vx / v) * sp; b.vy = (b.vy / v) * sp;
+      b.x += b.vx * DT; b.y += b.vy * DT;
+
+      const d = Math.hypot(b.x, b.y) || 1e-9;
+      if (d + b.r > R) {
+        const nx = b.x / d, ny = b.y / d;
+        let dot = b.vx * nx + b.vy * ny;
+        if (dot > 0) {
+          b.vx -= 2 * dot * nx; b.vy -= 2 * dot * ny;
+          const j = (this.rng() - 0.5) * 0.35;
+          const c = Math.cos(j), s = Math.sin(j);
+          const vx = b.vx * c - b.vy * s, vy = b.vx * s + b.vy * c;
+          b.vx = vx; b.vy = vy;
+          dot = b.vx * nx + b.vy * ny;
+          if (dot > -0.1 * sp) { b.vx -= (dot + 0.1 * sp) * nx; b.vy -= (dot + 0.1 * sp) * ny; }
+          const ang = Math.atan2(ny, nx);
+          b.rays.push(ang);
+          if (b.rays.length > MAX_RAYS) b.rays.shift();
+          b.bounces++;
+          this.ev({ type: "bounce", i: b.i, x: nx * R, y: ny * R, n: b.bounces });
+        }
+        b.x = nx * (R - b.r); b.y = ny * (R - b.r);
+      }
+    }
+
+    // Ball gegen Ball
+    for (let i = 0; i < n; i++) {
+      const a = B[i]; if (!a.alive) continue;
+      for (let k = i + 1; k < n; k++) {
+        const c = B[k]; if (!c.alive) continue;
+        const dx = c.x - a.x, dy = c.y - a.y;
+        const dist = Math.hypot(dx, dy), min = a.r + c.r;
+        if (dist >= min || dist === 0) continue;
+        const nx = dx / dist, ny = dy / dist;
+        const push = (min - dist) / 2;
+        a.x -= nx * push; a.y -= ny * push; c.x += nx * push; c.y += ny * push;
+        const va = a.vx * nx + a.vy * ny, vc = c.vx * nx + c.vy * ny;
+        if (va - vc > 0) {
+          a.vx += (vc - va) * nx; a.vy += (vc - va) * ny;
+          c.vx += (va - vc) * nx; c.vy += (va - vc) * ny;
+        }
+        if (t - this.cd[i][k] < PAIR_CD) continue;
+        this.cd[i][k] = t;
+        this.clash(a, c, (a.x + c.x) / 2, (a.y + c.y) / 2);
+        if (this.done) return;
+      }
+    }
+
+    // Strahlen schneiden
+    for (const a of B) {
+      if (!a.alive || a.shieldUntil > t) continue;
+      for (let r = a.rays.length - 1; r >= 0; r--) {
+        const px = Math.cos(a.rays[r]) * R, py = Math.sin(a.rays[r]) * R;
+        const sx = px - a.x, sy = py - a.y;
+        const len2 = sx * sx + sy * sy || 1e-9;
+        for (const c of B) {
+          if (c === a || !c.alive) continue;
+          const ex = c.x - a.x, ey = c.y - a.y;
+          if (ex * ex + ey * ey < (a.r + c.r + 0.02) ** 2) continue;
+          let u = (ex * sx + ey * sy) / len2;
+          u = u < 0 ? 0 : u > 1 ? 1 : u;
+          const qx = a.x + sx * u - c.x, qy = a.y + sy * u - c.y;
+          if (qx * qx + qy * qy < c.r * c.r) {
+            a.rays.splice(r, 1);
+            this.ev({ type: "cut", i: a.i, by: c.i, x: c.x + qx, y: c.y + qy });
+            break;
+          }
+        }
+      }
+    }
+
+    if (t >= DURATION) this.finishByRays();
+  }
+
+  clash(a, c, x, y) {
+    const na = a.rays.length, nc = c.rays.length;
+    const sa = a.shieldUntil > this.t, sc = c.shieldUntil > this.t;
+    let loser = null;
+    // Schwächerer Ball mit höchstens 1 Strahl fliegt raus
+    if (na < nc && na <= 1) loser = a;
+    else if (nc < na && nc <= 1) loser = c;
+    // Gleichstand bei 0 oder 1 Strahl: der Ball mit weniger Abprallern fliegt raus
+    else if (na <= 1 && na === nc) loser = a.bounces < c.bounces || (a.bounces === c.bounces && a.base < c.base) ? a : c;
+    if (loser) {
+      const other = loser === a ? c : a;
+      const lShield = loser === a ? sa : sc, oShield = loser === a ? sc : sa;
+      if (!lShield) return this.eliminate(loser, other);
+      // Schild: der Angreifer fliegt raus, wenn er selbst schwach ist
+      if (!oShield && other.rays.length <= 1) return this.eliminate(other, loser);
+      this.ev({ type: "block", x, y });
+      return;
+    }
+    let la = 0, lc = 0;
+    if (na < nc) la = Math.ceil(na / 2);
+    else if (nc < na) lc = Math.ceil(nc / 2);
+    else { la = 1; lc = 1; }
+    if (sa) la = 0;
+    if (sc) lc = 0;
+    a.rays.splice(0, la); c.rays.splice(0, lc);
+    this.ev({ type: "clash", a: a.i, c: c.i, la, lc, x, y });
+  }
+
+  eliminate(b, by) {
+    b.alive = false; b.outT = this.t; b.rays.length = 0;
+    this.outOrder.push(b.i);
+    this.ev({ type: "out", i: b.i, by: by.i, x: b.x, y: b.y });
+    const alive = this.balls.filter(q => q.alive);
+    if (alive.length === 1) { this.done = true; this.winner = alive[0].i; this.reason = "last"; }
+  }
+
+  finishByRays() {
+    const alive = this.balls.filter(q => q.alive);
+    alive.sort((p, q) => q.rays.length - p.rays.length || q.bounces - p.bounces || p.i - q.i);
+    this.done = true; this.winner = alive[0].i; this.reason = "time";
+  }
+
+  run() { while (!this.done) this.step(); return this.winner; }
+}
+
+/** Gewinnchancen + Quoten aus vielen Probe-Simulationen (in Häppchen, damit die Seite flüssig bleibt). */
+function computeOdds(setup, onProgress) {
+  return new Promise(resolve => {
+    const wins = new Array(setup.n).fill(0);
+    let done = 0;
+    const base = (setup.seed * 31 + 7) >>> 0;
+    function chunk() {
+      const until = performance.now() + 12;
+      while (done < ODDS_SIMS && performance.now() < until) {
+        wins[new Sim(setup, (base + done * 2654435761) >>> 0).run()]++;
+        done++;
+      }
+      onProgress && onProgress(done / ODDS_SIMS);
+      if (done < ODDS_SIMS) setTimeout(chunk, 0);
+      else {
+        const probs = wins.map(w => (w + 0.5) / (ODDS_SIMS + 0.5 * setup.n));
+        const odds = probs.map(p => Math.min(25, Math.max(1.1, Math.round((HOUSE / p) * 10) / 10)));
+        resolve({ wins, probs, odds });
+      }
+    }
+    chunk();
+  });
+}
+
+/* ================================================================
+   Speicher (optional – Spiel läuft auch ohne)
+   ================================================================ */
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("bb_" + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem("bb_" + k, JSON.stringify(v)); } catch {} },
+};
+const state = {
+  coins: store.get("coins", 100),
+  streak: store.get("streak", 0),
+  chaos: store.get("chaos", false),
+  dailyDone: store.get("dailyDone", ""),
+  dailyResult: store.get("dailyResult", null),
+  duelLevel: store.get("duelLevel", 1),
+  duelWins: store.get("duelWins", 0),
+};
+function save() {
+  store.set("coins", state.coins); store.set("streak", state.streak); store.set("chaos", state.chaos);
+  store.set("dailyDone", state.dailyDone); store.set("dailyResult", state.dailyResult);
+  store.set("duelLevel", state.duelLevel); store.set("duelWins", state.duelWins);
+}
+const CHAOS_PRICE = 250;
+const todayKey = () => { const d = new Date(); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
+
+/* ================================================================
+   Sound (WebAudio, kein Download)
+   ================================================================ */
+const audio = { ctx: null, master: null, dest: null, last: 0, count: 0 };
+const SCALE = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21];
+const ROOTS = [220, 246.94, 261.63, 293.66, 329.63, 196];
+function initAudio() {
+  if (audio.ctx) { audio.ctx.resume && audio.ctx.resume(); return; }
+  try {
+    const C = window.AudioContext || window.webkitAudioContext;
+    audio.ctx = new C();
+    audio.master = audio.ctx.createGain();
+    audio.master.gain.value = 0.35;
+    audio.master.connect(audio.ctx.destination);
+    if (audio.ctx.createMediaStreamDestination) {
+      audio.dest = audio.ctx.createMediaStreamDestination();
+      audio.master.connect(audio.dest);
+    }
+  } catch { audio.ctx = null; }
+}
+function tone(freq, dur = 0.12, type = "sine", vol = 0.5, slide = 0) {
+  const ac = audio.ctx; if (!ac) return;
+  const now = ac.currentTime;
+  if (now - audio.last < 0.03) { if (++audio.count > 3) return; } else { audio.count = 0; audio.last = now; }
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.type = type; o.frequency.setValueAtTime(freq, now);
+  if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(40, freq * slide), now + dur);
+  g.gain.setValueAtTime(0.0001, now);
+  g.gain.exponentialRampToValueAtTime(vol, now + 0.008);
+  g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+  o.connect(g); g.connect(audio.master);
+  o.start(now); o.stop(now + dur + 0.02);
+}
+
+/* ================================================================
+   Darstellung
+   ================================================================ */
+const $ = id => document.getElementById(id);
+const cv = $("cv"), ctx = cv.getContext("2d");
+const W = 720, H = 1280;
+cv.width = W; cv.height = H;
+const CX = W / 2;
+let CY = H * 0.43, SCALE_PX = W * 0.44;
+/** Arena-Position: im Tipp-Modus kleiner über dem Panel, im Kampf groß. */
+function targetLayout() {
+  if (game.phase === "bet") {
+    const panel = $("betPanel"), stage = $("stage");
+    const frac = panel.offsetHeight && stage.clientHeight ? panel.offsetTop / stage.clientHeight : 0.55;
+    const top = 0.165, bottom = Math.max(top + 0.15, frac - 0.025);
+    const rad = Math.min(W * 0.44, ((bottom - top) * H) / 2);
+    return [((top + bottom) / 2) * H, rad];
+  }
+  return [H * 0.43, W * 0.44];
+}
+const toPx = (x, y) => [CX + x * SCALE_PX, CY + y * SCALE_PX];
+
+const stars = (() => {
+  const r = mulberry32(12345), s = [];
+  for (let i = 0; i < 140; i++) s.push([r() * W, r() * H, r() * 1.4 + 0.3, r()]);
+  return s;
+})();
+
+const game = {
+  phase: "bet",          // bet | fight | result
+  kind: "tip",           // tip | duel
+  mode: "free",          // free | daily | chaos  (nur Tippen)
+  steerReady: 0, arrow: null, swipe: null, cpuMult: 1,
+  setup: null, odds: null, sim: null,
+  pick: -1, stake: 0, boostUsed: false,
+  particles: [], flashes: [],
+  acc: 0, lastTs: 0, endT: 0,
+  recorder: null, chunks: [], clipUrl: null,
+};
+
+function drawBackground(t) {
+  ctx.fillStyle = "#05060a"; ctx.fillRect(0, 0, W, H);
+  const g = ctx.createRadialGradient(CX, CY, 0, CX, CY, W * 0.7);
+  g.addColorStop(0, "rgba(60,70,120,0.18)"); g.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  for (const [x, y, r, p] of stars) {
+    ctx.globalAlpha = 0.25 + 0.35 * (0.5 + 0.5 * Math.sin(t * 1.3 + p * 20));
+    ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawTitle(text, color = "#fff") {
+  ctx.fillStyle = color; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.font = "800 52px system-ui, -apple-system, Segoe UI, Roboto, sans-serif";
+  ctx.shadowColor = "rgba(0,0,0,0.8)"; ctx.shadowBlur = 12;
+  ctx.fillText(text, CX, H * 0.115);
+  ctx.shadowBlur = 0;
+}
+
+function drawArena(R, hot) {
+  const rad = R * SCALE_PX;
+  ctx.save();
+  ctx.lineWidth = 7;
+  ctx.strokeStyle = hot ? "rgba(255,120,120,0.95)" : "rgba(235,225,255,0.95)";
+  ctx.shadowColor = hot ? "#ff4d5e" : "#b9a6ff"; ctx.shadowBlur = 22;
+  ctx.beginPath(); ctx.arc(CX, CY, rad + 3.5, 0, Math.PI * 2); ctx.stroke();
+  ctx.restore();
+}
+
+function drawBalls(balls, R, t, highlight) {
+  // Strahlen
+  ctx.lineCap = "round";
+  for (const b of balls) {
+    if (!b.alive) continue;
+    const col = BALL_DEFS[b.i].c;
+    const [bx, by] = toPx(b.x, b.y);
+    ctx.strokeStyle = col; ctx.lineWidth = 2.6; ctx.globalAlpha = 0.85;
+    ctx.beginPath();
+    for (const a of b.rays) {
+      const [px, py] = toPx(Math.cos(a) * R, Math.sin(a) * R);
+      ctx.moveTo(bx, by); ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  // Bälle
+  for (const b of balls) {
+    const col = BALL_DEFS[b.i].c;
+    const [bx, by] = toPx(b.x, b.y);
+    const rr = b.r * SCALE_PX;
+    if (!b.alive) {
+      const age = t - b.outT;
+      if (age > 1.2) continue;
+      ctx.globalAlpha = Math.max(0, 1 - age / 1.2);
+      ctx.strokeStyle = col; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.arc(bx, by, rr * (1 + age * 3), 0, 7); ctx.stroke();
+      ctx.globalAlpha = 1;
+      continue;
+    }
+    ctx.save();
+    ctx.shadowColor = col; ctx.shadowBlur = b.boost > 0.05 ? 40 : 18;
+    ctx.fillStyle = col; ctx.beginPath(); ctx.arc(bx, by, rr, 0, 7); ctx.fill();
+    ctx.restore();
+    ctx.lineWidth = 4; ctx.strokeStyle = "rgba(255,255,255,0.9)";
+    ctx.beginPath(); ctx.arc(bx, by, rr, 0, 7); ctx.stroke();
+    const st = game.sim ? game.sim.t : 0;
+    if (b.shieldUntil > st) {
+      ctx.save(); ctx.strokeStyle = "#5ee7ff"; ctx.lineWidth = 5; ctx.shadowColor = "#5ee7ff"; ctx.shadowBlur = 20;
+      ctx.globalAlpha = 0.6 + 0.4 * Math.sin(t * 14);
+      ctx.beginPath(); ctx.arc(bx, by, rr + 9, 0, 7); ctx.stroke(); ctx.restore();
+    }
+    if (b.magnetUntil > st) {
+      ctx.strokeStyle = "#ff6bd6"; ctx.lineWidth = 3;
+      for (let k = 0; k < 3; k++) {
+        const ph = (t * 1.6 + k / 3) % 1;
+        ctx.globalAlpha = 1 - ph;
+        ctx.beginPath(); ctx.arc(bx, by, rr + 10 + (1 - ph) * 90, 0, 7); ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
+    if (highlight === b.i) {
+      const duelFight = game.kind === "duel" && game.phase === "fight";
+      if (duelFight) {
+        // Abklingzeit fürs Lenken als Ring
+        const cd = Math.max(0, game.steerReady - st) / STEER_CD;
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = "rgba(255,255,255,0.15)";
+        ctx.beginPath(); ctx.arc(bx, by, rr + 14, 0, 7); ctx.stroke();
+        ctx.strokeStyle = cd > 0 ? "rgba(255,255,255,0.55)" : "#ffd34d";
+        ctx.beginPath(); ctx.arc(bx, by, rr + 14, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - cd)); ctx.stroke();
+      } else {
+        ctx.strokeStyle = "#ffd34d"; ctx.lineWidth = 3; ctx.setLineDash([8, 7]);
+        ctx.beginPath(); ctx.arc(bx, by, rr + 12 + Math.sin(t * 5) * 2, 0, 7); ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      if (game.kind === "duel") {
+        ctx.fillStyle = "#ffd34d"; ctx.font = "800 22px system-ui, sans-serif";
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText("DU", bx, by - rr - 30);
+      }
+    }
+    // Strahlen-Zahl
+    ctx.fillStyle = "#0b0c12"; ctx.font = `800 ${Math.round(rr * 0.95)}px system-ui, sans-serif`;
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(b.rays.length, bx, by + 1);
+  }
+}
+
+function drawParticles(dt) {
+  for (let k = game.particles.length - 1; k >= 0; k--) {
+    const p = game.particles[k];
+    p.life -= dt; if (p.life <= 0) { game.particles.splice(k, 1); continue; }
+    p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.96; p.vy *= 0.96;
+    ctx.globalAlpha = Math.min(1, p.life / p.max * 1.5);
+    ctx.fillStyle = p.c; ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, 7); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+function burst(x, y, c, n = 10, sp = 260) {
+  const [px, py] = toPx(x, y);
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, v = sp * (0.3 + Math.random() * 0.7);
+    game.particles.push({ x: px, y: py, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.5 + Math.random() * 0.4, max: 0.9, s: 2 + Math.random() * 3, c });
+  }
+}
+
+function drawScoreboard(sim) {
+  const balls = sim.balls;
+  const duel = game.kind === "duel", many = balls.length > 4;
+  const top = duel ? H * 0.775 : many ? H * 0.785 : H * 0.80;
+  const rowH = duel ? (many ? 23 : 30) : many ? 26 : 38;
+  const maxR = Math.max(5, ...balls.map(b => b.rays.length));
+  const order = balls.slice().sort((a, b) => (b.alive - a.alive) || b.rays.length - a.rays.length);
+  order.forEach((b, k) => {
+    const y = top + k * rowH;
+    const col = BALL_DEFS[b.i].c;
+    ctx.globalAlpha = b.alive ? 1 : 0.35;
+    ctx.fillStyle = col; ctx.beginPath(); ctx.arc(70, y, 11, 0, 7); ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,0.08)"; ctx.fillRect(95, y - 9, W - 260, 18);
+    ctx.fillStyle = col; ctx.fillRect(95, y - 9, (W - 260) * (b.rays.length / maxR), 18);
+    ctx.fillStyle = "#fff"; ctx.font = "700 24px system-ui, sans-serif"; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    ctx.fillText(b.alive ? String(b.rays.length) : "raus", W - 150, y);
+    if (b.i === game.pick) { ctx.fillText(game.kind === "duel" ? "DU" : "★", game.kind === "duel" ? 18 : 30, y); }
+    ctx.globalAlpha = 1;
+  });
+}
+
+function drawTimer(sim) {
+  if (sim.done) return;
+  const left = Math.max(0, DURATION - sim.t);
+  const sd = sim.t >= SD_START;
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.font = "800 34px system-ui, sans-serif";
+  ctx.fillStyle = sd ? "#ff6b6b" : "rgba(255,255,255,0.85)";
+  ctx.fillText(sd ? `SUDDEN DEATH  ${left.toFixed(1)}s` : `${left.toFixed(1)}s`, CX, H * 0.745);
+}
+
+function render(ts) {
+  const now = ts / 1000;
+  const dt = Math.min(0.05, now - (game.lastTs || now));
+  game.lastTs = now;
+  const [ty, ts2] = targetLayout();
+  const k = Math.min(1, dt * 6);
+  CY += (ty - CY) * k; SCALE_PX += (ts2 - SCALE_PX) * k;
+  drawBackground(now);
+
+  if (game.phase === "bet") {
+    drawTitle(game.kind === "duel" ? "Wähle deinen Ball!" : "Welche Farbe gewinnt?");
+    if (game.setup) {
+      drawArena(1, false);
+      const fake = game.setup.balls.map((b, i) => ({ ...b, i, alive: true, boost: 0, outT: 0 }));
+      drawBalls(fake, 1, now, game.pick);
+      // Richtungspfeile
+      for (const b of fake) {
+        const [bx, by] = toPx(b.x, b.y);
+        const L = 26 + b.speed * 50;
+        ctx.strokeStyle = "rgba(255,255,255,0.55)"; ctx.lineWidth = 3;
+        const ex = bx + Math.cos(b.dir) * (b.r * SCALE_PX + L), ey = by + Math.sin(b.dir) * (b.r * SCALE_PX + L);
+        ctx.beginPath(); ctx.moveTo(bx + Math.cos(b.dir) * b.r * SCALE_PX, by + Math.sin(b.dir) * b.r * SCALE_PX); ctx.lineTo(ex, ey); ctx.stroke();
+      }
+    }
+  } else {
+    const sim = game.sim;
+    if (game.phase === "fight") {
+      game.acc += dt;
+      let steps = 0;
+      while (game.acc >= DT && !sim.done && steps < 20) { sim.step(); game.acc -= DT; steps++; }
+      handleEvents(sim);
+      if (sim.done && !game.endT) { game.endT = now; }
+      if (game.endT && now - game.endT > 0.9) showResult();
+    }
+    const winner = sim.done ? BALL_DEFS[sim.winner] : null;
+    if (game.kind === "duel") {
+      const me = sim.balls[game.pick];
+      if (winner) drawTitle(sim.winner === game.pick ? "DU GEWINNST!" : `${winner.name.toUpperCase()} GEWINNT!`, winner.c);
+      else drawTitle(me.alive ? "Überlebe die Arena!" : "Du bist raus …", me.alive ? "#fff" : "#ff6b6b");
+    } else {
+      drawTitle(winner ? `${winner.name.toUpperCase()} GEWINNT!` : "Welche Farbe gewinnt?", winner ? winner.c : "#fff");
+    }
+    drawArena(sim.R, sim.t >= SD_START && !sim.done);
+    drawBalls(sim.balls, sim.R, now, game.pick);
+    // Lenk-Pfeil als Rückmeldung
+    if (game.arrow && now < game.arrow.until && sim.balls[game.pick].alive) {
+      const b = sim.balls[game.pick], [bx, by] = toPx(b.x, b.y);
+      const a = Math.atan2(game.arrow.dy, game.arrow.dx), L = 120 * ((game.arrow.until - now) / 0.4);
+      ctx.save(); ctx.strokeStyle = "#ffd34d"; ctx.lineWidth = 6; ctx.globalAlpha = 0.8;
+      ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx + Math.cos(a) * L, by + Math.sin(a) * L); ctx.stroke(); ctx.restore();
+    }
+    drawParticles(dt);
+    drawTimer(sim);
+    drawScoreboard(sim);
+  }
+  requestAnimationFrame(render);
+}
+
+function handleEvents(sim) {
+  for (const e of sim.events) {
+    const col = BALL_DEFS[e.i ?? e.a]?.c || "#fff";
+    if (e.type === "bounce") {
+      const root = ROOTS[e.i % ROOTS.length];
+      tone(root * Math.pow(2, SCALE[e.n % SCALE.length] / 12), 0.14, "triangle", 0.35);
+      burst(e.x, e.y, col, 6, 160);
+    } else if (e.type === "cut") {
+      tone(900, 0.06, "square", 0.08, 0.5);
+      burst(e.x, e.y, BALL_DEFS[e.i].c, 5, 120);
+    } else if (e.type === "clash") {
+      tone(140, 0.18, "sawtooth", 0.18, 0.6);
+      burst(e.x, e.y, "#ffffff", 12, 260);
+    } else if (e.type === "out") {
+      tone(520, 0.5, "sawtooth", 0.25, 0.25);
+      burst(e.x, e.y, BALL_DEFS[e.i].c, 40, 420);
+      showToast(e.i === game.pick ? "Dein Ball ist raus 😬" : `${BALL_DEFS[e.i].name} ist raus!`);
+      if (e.i === game.pick) { $("boostBtn").disabled = true; setJokers(false); }
+    } else if (e.type === "boost") {
+      tone(400, 0.35, "sine", 0.3, 2.5);
+    } else if (e.type === "steer") {
+      tone(660, 0.08, "sine", 0.2, 1.5);
+    } else if (e.type === "shield") {
+      tone(300, 0.4, "triangle", 0.3, 2);
+    } else if (e.type === "magnet") {
+      tone(180, 0.6, "sine", 0.35, 0.5);
+    } else if (e.type === "block") {
+      tone(1200, 0.12, "triangle", 0.25, 0.8);
+      burst(e.x, e.y, "#5ee7ff", 16, 300);
+    }
+  }
+  sim.events.length = 0;
+}
+
+/* ================================================================
+   Ablauf & Bedienung
+   ================================================================ */
+let toastTimer = 0;
+function showToast(msg) {
+  const t = $("toast"); t.textContent = msg; t.style.opacity = 1;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => (t.style.opacity = 0), 1600);
+}
+function updateHud() {
+  $("coins").textContent = `🪙 ${state.coins}`;
+  $("streak").textContent = `🔥 ${state.streak}`;
+  $("streak").classList.toggle("hidden", state.streak < 1);
+  $("tabChaos").textContent = state.chaos ? "💥 Chaos" : `🔒 Chaos ${CHAOS_PRICE}🪙`;
+  const dailyPlayed = state.dailyDone === todayKey();
+  $("tabDaily").textContent = dailyPlayed ? "📅 Morgen" : "📅 Täglich";
+  $("tabDaily").disabled = dailyPlayed;
+  for (const [id, m] of [["tabFree", "free"], ["tabDaily", "daily"], ["tabChaos", "chaos"]]) $(id).classList.toggle("active", game.mode === m);
+  $("kindTip").classList.toggle("active", game.kind === "tip");
+  $("kindDuel").classList.toggle("active", game.kind === "duel");
+  $("tipTabs").classList.toggle("hidden", game.kind !== "tip");
+}
+
+let roundToken = 0;
+async function newRound() {
+  const token = ++roundToken;
+  game.phase = "bet"; game.pick = -1; game.sim = null; game.endT = 0; game.boostUsed = false; game.particles = [];
+  if (state.coins < 10) { state.coins = 50; save(); showToast("Rettungsschirm: +50 Münzen"); }
+  $("resultPanel").classList.add("hidden"); $("helpPanel").classList.add("hidden");
+  $("betPanel").classList.remove("hidden"); $("boostBtn").classList.add("hidden"); $("jokerBar").classList.add("hidden");
+  $("betBody").classList.add("hidden"); $("duelBody").classList.add("hidden");
+  updateHud();
+
+  if (game.kind === "duel") {
+    $("oddsLoading").classList.add("hidden"); $("optsRow").classList.remove("hidden");
+    const n = 4 + Math.min(2, Math.floor((state.duelLevel - 1) / 3));
+    game.setup = makeSetup((Math.random() * 2 ** 32) >>> 0, n);
+    game.cpuMult = 1 + 0.05 * Math.min(state.duelLevel - 1, 10);
+    buildDuelUi();
+    return;
+  }
+  $("oddsLoading").classList.remove("hidden"); $("optsRow").classList.add("hidden");
+
+  const n = game.mode === "chaos" ? 6 : 4;
+  const seed = game.mode === "daily" ? hashStr("daily-" + todayKey()) : (Math.random() * 2 ** 32) >>> 0;
+  game.setup = makeSetup(seed, n);
+  game.odds = null;
+  const odds = await computeOdds(game.setup, p => { if (token === roundToken) $("progBar").style.width = `${Math.round(p * 100)}%`; });
+  if (token !== roundToken) return;
+  game.odds = odds;
+  buildBetUi();
+}
+
+function buildBetUi() {
+  const list = $("ballList"); list.innerHTML = "";
+  list.classList.toggle("six", game.setup.n > 4);
+  game.setup.balls.forEach((b, i) => {
+    const d = BALL_DEFS[i];
+    const btn = document.createElement("button");
+    btn.className = "ballbtn"; btn.style.setProperty("--c", d.c);
+    btn.innerHTML = `<span class="dot"></span><span><div class="bname">${d.name}</div>
+      <div class="bodds"><b>${game.odds.odds[i].toFixed(1)}×</b> · ${Math.round(game.odds.probs[i] * 100)}%</div></span>`;
+    btn.onclick = () => { game.pick = i; refreshBet(); };
+    list.appendChild(btn);
+  });
+  const chips = $("chips"); chips.innerHTML = "";
+  const opts = [10, 25, 50, "Alles"];
+  if (!opts.some(v => stakeValue(v) === game.stake)) game.stake = Math.min(25, state.coins);
+  for (const v of opts) {
+    const c = document.createElement("button");
+    c.className = "chip"; c.textContent = v === "Alles" ? "Alles" : v;
+    c.dataset.v = v;
+    c.onclick = () => { game.stake = stakeValue(v); refreshBet(); };
+    chips.appendChild(c);
+  }
+  $("oddsLoading").classList.add("hidden"); $("betBody").classList.remove("hidden"); $("optsRow").classList.remove("hidden");
+  refreshBet();
+}
+const stakeValue = v => (v === "Alles" ? state.coins : Math.min(v, state.coins));
+
+function refreshBet() {
+  [...$("ballList").children].forEach((b, i) => b.classList.toggle("sel", i === game.pick));
+  [...$("chips").children].forEach(c => {
+    const v = c.dataset.v === "Alles" ? "Alles" : +c.dataset.v;
+    c.disabled = v !== "Alles" && v > state.coins;
+    c.classList.toggle("sel", stakeValue(v) === game.stake && !c.disabled);
+  });
+  const go = $("goBtn");
+  if (game.pick < 0) { go.disabled = true; go.textContent = "Farbe wählen"; }
+  else {
+    go.disabled = game.stake <= 0;
+    const win = Math.floor(game.stake * game.odds.odds[game.pick] * streakBonus());
+    go.textContent = `Los! ${game.stake} 🪙 → ${win} 🪙`;
+  }
+}
+const streakBonus = () => 1 + Math.min(5, state.streak) * 0.1;
+
+function startFight() {
+  if (game.pick < 0 || game.stake <= 0) return;
+  initAudio();
+  state.coins -= game.stake; save(); updateHud();
+  const runSeed = game.mode === "daily" ? hashStr("run-" + todayKey()) : (Math.random() * 2 ** 32) >>> 0;
+  game.sim = new Sim(game.setup, runSeed, true);
+  game.phase = "fight"; game.acc = 0; game.endT = 0;
+  $("betPanel").classList.add("hidden");
+  const bb = $("boostBtn");
+  bb.classList.remove("hidden"); bb.disabled = false; bb.textContent = "⚡ Boost";
+  bb.style.setProperty("--c", BALL_DEFS[game.pick].c);
+  if ($("recChk").checked) startRecording();
+}
+
+/* ---------------- Duell ---------------- */
+const STEER_CD = 1.2;
+const pips = (v, max = 5) => "▮".repeat(v) + "▯".repeat(max - v);
+const duelReward = () => 30 + 10 * state.duelLevel;
+
+function buildDuelUi() {
+  const list = $("duelList"); list.innerHTML = "";
+  list.classList.toggle("six", game.setup.n > 4);
+  game.setup.balls.forEach((b, i) => {
+    const d = BALL_DEFS[i];
+    const sp = 1 + Math.round(((b.speed - 0.55) / 0.4) * 4), sz = 1 + Math.round(((b.r - 0.045) / 0.03) * 4);
+    const btn = document.createElement("button");
+    btn.className = "ballbtn"; btn.style.setProperty("--c", d.c);
+    btn.innerHTML = `<span class="dot"></span><span><div class="bname">${d.name}</div>
+      <div class="stat">Tempo <i>${pips(sp)}</i></div><div class="stat">Größe <i>${pips(sz)}</i></div></span>`;
+    btn.onclick = () => { game.pick = i; refreshDuel(); };
+    list.appendChild(btn);
+  });
+  const extra = game.cpuMult > 1 ? ` · Gegner +${Math.round((game.cpuMult - 1) * 100)} % Tempo` : "";
+  $("duelLabel").textContent = `Duell · Stufe ${state.duelLevel} · ${game.setup.n - 1} Gegner${extra}`;
+  $("duelBody").classList.remove("hidden");
+  refreshDuel();
+}
+function refreshDuel() {
+  [...$("duelList").children].forEach((b, i) => b.classList.toggle("sel", i === game.pick));
+  const go = $("duelGo");
+  go.disabled = game.pick < 0;
+  go.textContent = game.pick < 0 ? "Deinen Ball wählen" : `Start! Sieg = +${duelReward()} 🪙`;
+}
+function setJokers(on) { for (const id of ["jkTurbo", "jkShield", "jkMagnet"]) $(id).disabled = !on; }
+
+function startDuel() {
+  if (game.pick < 0) return;
+  initAudio();
+  const setup = { ...game.setup, balls: game.setup.balls.map((b, i) => (i === game.pick ? b : { ...b, speed: b.speed * game.cpuMult })) };
+  game.sim = new Sim(setup, (Math.random() * 2 ** 32) >>> 0, true);
+  game.phase = "fight"; game.acc = 0; game.endT = 0; game.steerReady = 0; game.arrow = null;
+  $("betPanel").classList.add("hidden");
+  $("jokerBar").classList.remove("hidden"); setJokers(true);
+  showToast("👆 Wischen oder tippen zum Lenken!");
+  if ($("recChk").checked) startRecording();
+}
+
+function steerPlayer(dx, dy) {
+  const sim = game.sim;
+  if (game.kind !== "duel" || game.phase !== "fight" || !sim || sim.done) return;
+  if (!sim.balls[game.pick].alive || sim.t < game.steerReady) return;
+  sim.steer(game.pick, dx, dy);
+  game.steerReady = sim.t + STEER_CD;
+  game.arrow = { dx, dy, until: game.lastTs + 0.4 };
+}
+function canvasPoint(e) {
+  const r = cv.getBoundingClientRect();
+  return [((e.clientX - r.left) / r.width) * W, ((e.clientY - r.top) / r.height) * H];
+}
+cv.addEventListener("pointerdown", e => {
+  if (game.kind !== "duel" || game.phase !== "fight") return;
+  e.preventDefault();
+  game.swipe = { p: canvasPoint(e) };
+});
+cv.addEventListener("pointerup", e => {
+  const s = game.swipe; game.swipe = null;
+  if (!s || !game.sim) return;
+  const [x, y] = canvasPoint(e);
+  let dx = x - s.p[0], dy = y - s.p[1];
+  if (Math.hypot(dx, dy) < 25) {
+    // Tippen: in Richtung des Fingers lenken
+    const b = game.sim.balls[game.pick], [bx, by] = toPx(b.x, b.y);
+    dx = x - bx; dy = y - by;
+  }
+  steerPlayer(dx, dy);
+});
+cv.addEventListener("pointercancel", () => (game.swipe = null));
+
+function useJoker(id, fn) {
+  const sim = game.sim;
+  if (!sim || sim.done || game.phase !== "fight" || !sim.balls[game.pick].alive) return;
+  fn(sim); $(id).disabled = true;
+}
+
+function showDuelResult() {
+  const sim = game.sim, won = sim.winner === game.pick, wd = BALL_DEFS[sim.winner];
+  let place;
+  if (won) place = 1;
+  else {
+    const k = sim.outOrder.indexOf(game.pick);
+    if (k >= 0) place = sim.balls.length - k;
+    else {
+      const alive = sim.balls.filter(b => b.alive).sort((p, q) => q.rays.length - p.rays.length || q.bounces - p.bounces || p.i - q.i);
+      place = alive.findIndex(b => b.i === game.pick) + 1;
+    }
+  }
+  let payout = 0, title, sub;
+  if (won) {
+    payout = duelReward(); state.coins += payout; state.duelWins++; state.duelLevel++;
+    title = `<span class="win">Sieg! +${payout} 🪙</span>`;
+    sub = `Weiter auf <b>Stufe ${state.duelLevel}</b> – die Gegner werden stärker. Siege gesamt: <b>${state.duelWins}</b> 🏆`;
+  } else {
+    if (place === 2) { payout = 10; state.coins += payout; }
+    title = `<span class="lose">Platz ${place} von ${sim.balls.length}${payout ? ` · +${payout} 🪙` : ""}</span>`;
+    sub = `<b style="color:${wd.c}">${wd.name}</b> gewinnt. Tipp: Lenke weg von fremden Strahlen und nutze den Magnet, wenn du mehr Strahlen hast.`;
+  }
+  save(); updateHud();
+  $("resTitle").innerHTML = title; $("resSub").innerHTML = sub;
+  $("nextBtn").textContent = won ? "Nächstes Duell" : "Nochmal";
+}
+
+function showResult() {
+  if (game.phase !== "fight") return;
+  game.phase = "result";
+  $("boostBtn").classList.add("hidden"); $("jokerBar").classList.add("hidden");
+  if (game.kind === "duel") {
+    showDuelResult();
+    $("resultPanel").classList.remove("hidden"); $("clipLink").classList.add("hidden"); $("shareBtn").classList.add("hidden");
+    if (game.recorder) setTimeout(stopRecording, 1500);
+    return;
+  }
+  $("nextBtn").textContent = "Nächste Runde";
+  const sim = game.sim, won = sim.winner === game.pick;
+  const wd = BALL_DEFS[sim.winner];
+  let payout = 0;
+  if (won) {
+    payout = Math.floor(game.stake * game.odds.odds[game.pick] * streakBonus());
+    state.coins += payout; state.streak++;
+  } else state.streak = 0;
+  if (game.mode === "daily") {
+    state.dailyDone = todayKey();
+    state.dailyResult = { won, winner: wd.name, pick: BALL_DEFS[game.pick].name };
+  }
+  save(); updateHud();
+  $("resTitle").innerHTML = won ? `<span class="win">Richtig getippt! +${payout} 🪙</span>` : `<span class="lose">Leider daneben</span>`;
+  const how = sim.reason === "last" ? "als letzter Ball übrig" : "mit den meisten Strahlen";
+  $("resSub").innerHTML = `<b style="color:${wd.c}">${wd.name}</b> gewinnt ${how}.` +
+    (won && state.streak > 1 ? ` Serie: <b>${state.streak}</b> 🔥` : "");
+  $("resultPanel").classList.remove("hidden");
+  $("clipLink").classList.add("hidden");
+  $("shareBtn").classList.toggle("hidden", !(navigator.share && game.mode === "daily"));
+  if (game.recorder) setTimeout(stopRecording, 1500);
+}
+
+/* Clip-Aufnahme */
+function startRecording() {
+  if (!cv.captureStream || !window.MediaRecorder) { showToast("Aufnahme wird hier nicht unterstützt"); return; }
+  const types = ["video/mp4;codecs=avc1", "video/mp4", "video/webm;codecs=vp9", "video/webm"];
+  const mime = types.find(t => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || "";
+  const stream = cv.captureStream(60);
+  if (audio.dest) audio.dest.stream.getAudioTracks().forEach(tr => stream.addTrack(tr));
+  try {
+    game.chunks = [];
+    game.recorder = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 6e6 } : undefined);
+    game.recorder.ondataavailable = e => e.data && e.data.size && game.chunks.push(e.data);
+    game.recorder.onstop = () => {
+      const type = game.recorder.mimeType || mime || "video/webm";
+      const blob = new Blob(game.chunks, { type });
+      if (game.clipUrl) URL.revokeObjectURL(game.clipUrl);
+      game.clipUrl = URL.createObjectURL(blob);
+      const a = $("clipLink");
+      a.href = game.clipUrl; a.download = `ball-battle.${type.includes("mp4") ? "mp4" : "webm"}`;
+      a.classList.remove("hidden");
+      game.recorder = null;
+    };
+    game.recorder.start(250);
+    showToast("🎬 Aufnahme läuft");
+  } catch { game.recorder = null; showToast("Aufnahme fehlgeschlagen"); }
+}
+function stopRecording() { if (game.recorder && game.recorder.state !== "inactive") game.recorder.stop(); }
+
+/* Events */
+$("goBtn").onclick = startFight;
+$("duelGo").onclick = startDuel;
+$("kindTip").onclick = () => { if (game.kind !== "tip") { game.kind = "tip"; newRound(); } };
+$("kindDuel").onclick = () => { if (game.kind !== "duel") { game.kind = "duel"; newRound(); } };
+$("jkTurbo").onclick = () => useJoker("jkTurbo", sim => sim.boost(game.pick, 1.1));
+$("jkShield").onclick = () => useJoker("jkShield", sim => sim.shield(game.pick));
+$("jkMagnet").onclick = () => useJoker("jkMagnet", sim => sim.magnet(game.pick));
+$("nextBtn").onclick = () => { stopRecording(); if (game.mode === "daily") game.mode = "free"; newRound(); };
+$("newBtn").onclick = () => newRound();
+$("helpBtn").onclick = () => { $("betPanel").classList.add("hidden"); $("helpPanel").classList.remove("hidden"); };
+$("helpClose").onclick = () => { $("helpPanel").classList.add("hidden"); $("betPanel").classList.remove("hidden"); };
+$("boostBtn").onclick = () => {
+  if (game.boostUsed || !game.sim || game.sim.done) return;
+  if (!game.sim.balls[game.pick].alive) { showToast("Dein Ball ist schon raus"); return; }
+  initAudio();
+  game.boostUsed = true; game.sim.boost(game.pick);
+  $("boostBtn").disabled = true; $("boostBtn").textContent = "⚡ verbraucht";
+};
+$("tabFree").onclick = () => { if (game.mode !== "free") { game.mode = "free"; newRound(); } };
+$("tabDaily").onclick = () => { if (game.mode !== "daily" && state.dailyDone !== todayKey()) { game.mode = "daily"; newRound(); } };
+$("tabChaos").onclick = () => {
+  if (!state.chaos) {
+    if (state.coins < CHAOS_PRICE) { showToast(`Chaos-Modus kostet ${CHAOS_PRICE} 🪙`); return; }
+    if (!confirm(`Chaos-Modus (6 Bälle) für ${CHAOS_PRICE} Münzen freischalten?`)) return;
+    state.coins -= CHAOS_PRICE; state.chaos = true; save(); showToast("💥 Chaos-Modus freigeschaltet!");
+  }
+  if (game.mode !== "chaos") { game.mode = "chaos"; newRound(); } else updateHud();
+};
+$("shareBtn").onclick = () => {
+  const r = state.dailyResult; if (!r) return;
+  navigator.share({ text: `Ball Battle Tages-Match: ${r.winner} hat gewonnen – ich hatte ${r.pick} getippt ${r.won ? "✅" : "❌"}. Und du?` }).catch(() => {});
+};
+
+// Für Tests in der Konsole
+window.BB = { makeSetup, Sim, computeOdds, mulberry32 };
+
+newRound();
+requestAnimationFrame(render);
+</script>
+</body>
+</html>
