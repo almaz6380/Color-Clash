@@ -6,7 +6,9 @@ ohne Bibliotheken, Server oder API-Keys. Läuft direkt im Handy-Browser.
 ## Spielen
 - Lokal: `index.html` im Browser öffnen.
 - Online: `https://almaz6380.github.io/color-clash/` (GitHub *Settings → Pages* → Branch `main`, Ordner `/ (root)`).
-- Auf dem Handy über *Teilen → Zum Home-Bildschirm* wie eine App ablegen.
+- Auf dem Handy wie eine App ablegen (mit eigenem Icon):
+  - **iPhone (Safari):** Teilen-Knopf → *Zum Home-Bildschirm*.
+  - **Android (Chrome):** Menü ⋮ → *Zum Startbildschirm hinzufügen* bzw. *App installieren*.
 
 ## Tests
 - `node tests/sim.test.js` – Simulation: Determinismus, Balance, Tempo (nur Node nötig).

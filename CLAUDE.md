@@ -36,6 +36,8 @@ Ball** (Modus Duell). Läuft als Web-App im Handy-Browser, veröffentlicht über
 | `CLAUDE.md` | Diese Arbeitsanweisung |
 | `tests/sim.test.js` | Prüft Simulation ohne Browser: Determinismus, Balance, Tempo (`node tests/sim.test.js`) |
 | `.gitignore` | Hält Screenshots und `node_modules/` aus dem Repo |
+| `manifest.webmanifest` | App-Name, Farben, Icons für „Zum Home-Bildschirm“ |
+| `icons/` | `icon.svg` (Vorlage) + daraus erzeugte PNGs 180/192/512 px |
 | `tests/ui.test.js` | Spielt beide Modi im simulierten iPhone durch, macht Screenshots (`node tests/ui.test.js`, braucht Playwright) |
 
 `tests/sim.test.js` liest den Code zwischen `const BALL_DEFS` und `/** Gewinnchancen` aus
@@ -114,7 +116,7 @@ Zeichenfläche 720 × 1280, per CSS skaliert. UI-Panels sind HTML über dem Canv
 - Der `localStorage`-Präfix `bb_` und `window.BB` bleiben absichtlich unverändert (sonst geht
   gespeicherter Fortschritt verloren).
 
-### 3. Auf echten Handys testbar machen
+### 3. Auf echten Handys testbar machen (Manifest + Icon ✅, Branch `main` ✅ – offen: Pages-Einstellung, Handy-Test durch den User)
 - Sicherstellen, dass GitHub Pages läuft (Settings → Pages → Branch `main`, Ordner `/ (root)`).
 - Optional: `manifest.webmanifest` + Icon (als Inline-SVG oder kleine PNG im Repo), damit
   „Zum Home-Bildschirm“ wie eine App aussieht. Kein Service-Worker nötig.
