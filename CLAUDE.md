@@ -103,16 +103,16 @@ Zeichenfläche 720 × 1280, per CSS skaliert. UI-Panels sind HTML über dem Canv
 
 ## Aufgaben – in dieser Reihenfolge
 
-### 1. Repo einrichten (falls noch nicht geschehen)
+### 1. Repo einrichten ✅ erledigt
 - Prüfen, dass `index.html`, `README.md`, `CLAUDE.md`, `.gitignore`, `tests/` im Repo-Root liegen.
 - Beide Tests ausführen; beide müssen grün sein.
 - **Fertig, wenn:** Tests grün, Commit gepusht.
 
-### 2. Spielname festlegen ⚠️ erst beim User nachfragen
-- Im Spiel steht noch „Ball Battle“ (`<title>`, Regeln-Text, Clip-Dateiname `ball-battle.*`,
-  README). Das Repo heißt `color-clash`.
-- **Frage den User**, ob das Spiel „Color Clash“ heißen soll. Nur bei Ja überall umbenennen.
-  Den `localStorage`-Präfix `bb_` **nicht** ändern (sonst geht gespeicherter Fortschritt verloren).
+### 2. Spielname festlegen ✅ erledigt
+- Der User hat entschieden: Das Spiel heißt **„Color Clash“** (`<title>`, Regeln-Text, Teilen-Text,
+  Clip-Dateiname `color-clash.*`, README).
+- Der `localStorage`-Präfix `bb_` und `window.BB` bleiben absichtlich unverändert (sonst geht
+  gespeicherter Fortschritt verloren).
 
 ### 3. Auf echten Handys testbar machen
 - Sicherstellen, dass GitHub Pages läuft (Settings → Pages → Branch `main`, Ordner `/ (root)`).

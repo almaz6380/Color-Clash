@@ -1,4 +1,4 @@
-# color-clash – Welche Farbe gewinnt?
+# Color Clash – Welche Farbe gewinnt?
 
 Ein Physik-Tippspiel im Stil der „Which color ball will win?“-Videos – als **eine einzige HTML-Datei**,
 ohne Bibliotheken, Server oder API-Keys. Läuft direkt im Handy-Browser.

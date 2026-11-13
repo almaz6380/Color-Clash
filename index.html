@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#05060a">
-<title>Ball Battle</title>
+<title>Color Clash</title>
 <style>
   :root {
     --bg: #05060a;
@@ -205,7 +205,7 @@
   <!-- Regeln -->
   <div class="panel hidden" id="helpPanel">
     <div class="help">
-      <h3>So funktioniert Ball Battle</h3>
+      <h3>So funktioniert Color Clash</h3>
       <ul>
         <li><b>Tippen:</b> Wähle die Farbe, die deiner Meinung nach gewinnt, und setze Münzen. Die Quote zeigt, wie viel du bekommst – berechnet aus 200 Probe-Simulationen.</li>
         <li><b>Strahlen:</b> Jeder Abprall an der Wand erzeugt einen Strahl, der am Ball hängt.</li>
@@ -1111,7 +1111,7 @@ function startRecording() {
       if (game.clipUrl) URL.revokeObjectURL(game.clipUrl);
       game.clipUrl = URL.createObjectURL(blob);
       const a = $("clipLink");
-      a.href = game.clipUrl; a.download = `ball-battle.${type.includes("mp4") ? "mp4" : "webm"}`;
+      a.href = game.clipUrl; a.download = `color-clash.${type.includes("mp4") ? "mp4" : "webm"}`;
       a.classList.remove("hidden");
       game.recorder = null;
     };
@@ -1152,7 +1152,7 @@ $("tabChaos").onclick = () => {
 };
 $("shareBtn").onclick = () => {
   const r = state.dailyResult; if (!r) return;
-  navigator.share({ text: `Ball Battle Tages-Match: ${r.winner} hat gewonnen – ich hatte ${r.pick} getippt ${r.won ? "✅" : "❌"}. Und du?` }).catch(() => {});
+  navigator.share({ text: `Color Clash Tages-Match: ${r.winner} hat gewonnen – ich hatte ${r.pick} getippt ${r.won ? "✅" : "❌"}. Und du?` }).catch(() => {});
 };
 
 // Für Tests in der Konsole
